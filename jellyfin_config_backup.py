@@ -9,8 +9,11 @@ import glob
 from subprocess import run
 import logging
 from logging.handlers import RotatingFileHandler
+import tarfile
 
-version = "1.1b"
+
+
+version = "1.1c"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-v", "--version", dest="getversion", help="Gives the current version of the script.", default=False, action='store_true')
@@ -33,23 +36,24 @@ keepbackups = args.keepbackups
 devicehash = args.devicehash
 optionalfiles = args.optionalfile
 scriptuser = getpass.getuser()
+now = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
 scriptuserpath = "/var/services/homes/" + scriptuser
 skipahead = ""
 # Show version number and quit
 
 if showversion:
-	print (f"Jellyfin Config Backup v{version} by Zang74\nhttps://github.com/zang74/jellyfin_backup")
+	print (f"Jellyfin Config Backup v{version} by jokob-sk\nhttps://github.com/jokob-sk/jellyfin_backup")
 	exit()
 
 	
-folders = ['config', 'plugins', 'data/subtitles', 'data/collections', 'data/playlists']
+folders = ['config', 'data/plugins', 'data/data/subtitles', 'data/data/collections', 'data/data/playlists', 'data/root']
 
 if metadata:
-	folders.append('metadata')
+	folders.append('data/metadata')
 
 # Files to back up
 
-files = ['data/jellyfin.db', 'data/library.db', 'data/splashscreen.png']
+files = ['data/data/jellyfin.db', 'data/data/library.db', 'data/data/splashscreen.png']
 
 # Collect optional files
 if optionalfiles:
@@ -58,7 +62,7 @@ if optionalfiles:
 
 # Add devicehash (on by default)
 if devicehash:
-	files.append("data/device.txt")
+	files.append("data/data/device.txt")
 
 scriptpath = os.path.abspath(os.path.dirname(__file__))
 tempdir = scriptpath + "/jfcfg_bkp_temp"
@@ -114,10 +118,10 @@ def howmanybackups(keepbackups):
 def introchecks():
 
 	# kick user out if it's a non-standard one without a home directory
-	if not os.path.isdir(scriptuserpath):
-		thislog.error("No user home directory exists. Please use an active user with a home directory.")
-		logging.shutdown()
-		exit()
+	# if not os.path.isdir(scriptuserpath):
+		# thislog.error("No user home directory exists. Please use an active user with a home directory.")
+		# logging.shutdown()
+		# exit()
 
 	# We *need* a backup destination
 	if not backupdest:
@@ -167,6 +171,24 @@ def zipdir(path, ziph):
 			path = os.path.join(root, file)
 			name_dest = os.path.relpath(os.path.join(root, file), 'jfcfg_bkp_temp')						
 			ziph.write(path, f"jellyfin/{name_dest}")
+            
+            
+def compress(members):
+    """
+    Adds files (`members`) to a tar_file and compress it
+    """
+    # open file for gzip compressed writing
+    tar = tarfile.open(f"{backupdest}/jellyfin_config_backup_{now}.tar.gz", mode="w:gz")
+    # with progress bar
+    # set the progress bar
+    #progress = tqdm(members)
+    for member in members:
+        # add file/folder/link to the tar file (compress)
+        tar.add(member)
+        # set the progress description of the progress bar
+        
+    # close the file
+    tar.close()
 
 def build_archive():
 
@@ -183,12 +205,15 @@ def build_archive():
 			continue
 		shutil.copytree(f"{configpath}/{folder}", f"{tempdir}/{folder}")
 
-	now = datetime.datetime.now().strftime("%Y-%m-%d_%H%M")
-	zip = zipfile.ZipFile(f"{backupdest}/jellyfin_config_backup_{now}.zip", 'w', zipfile.ZIP_DEFLATED)
-	zipdir(tempdir, zip)
-	zip.close()
-	thislog.info(f"Archive created at {backupdest}/jellyfin_config_backup_{now}.zip")
+	
+	# zip = zipfile.ZipFile(f"{backupdest}/jellyfin_config_backup_{now}.zip", 'w', zipfile.ZIP_DEFLATED)
+	#zipdir(tempdir, zip)
+	# zip.close()
+	# thislog.info(f"Archive created at {backupdest}/jellyfin_config_backup_{now}.zip")    
+	compress([f"{tempdir}"])
+	thislog.info(f"Archive created at {backupdest}/jellyfin_config_backup_{now}.tar.gz")
 	thislog.info("Cleaning up...")
+    
 	try:
 		shutil.rmtree(tempdir)
 	except Exception as error:
