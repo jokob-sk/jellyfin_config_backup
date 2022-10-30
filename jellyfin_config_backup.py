@@ -231,8 +231,8 @@ def rotate():
 	keeps = howmanybackups(keepbackups)
 	#rotate backups
 	thislog.info(f"Checking backups for rotation.({keeps} iterations to be kept.)")
-	while len(glob.glob(f"{backupdest}/jellyfin_config_backup_*.zip")) > keeps:
-		totalbackups = glob.glob(f"{backupdest}/jellyfin_config_backup_*.zip")
+	while len(glob.glob(f"{backupdest}/jellyfin_config_backup_*.tar.gz")) > keeps:
+		totalbackups = glob.glob(f"{backupdest}/jellyfin_config_backup_*.tar.gz")
 		todelete = min(totalbackups, key=os.path.getctime)
 		try:	
 			# Delete older backups beyond specified number
@@ -241,7 +241,7 @@ def rotate():
 		except OSError as error:
 			thislog.error(str(error))
 	
-	backupsleft = glob.glob(f"{backupdest}/jellyfin_config_backup_*.zip")
+	backupsleft = glob.glob(f"{backupdest}/jellyfin_config_backup_*.tar.gz")
 	numberofbackups = len(backupsleft)
 	
 	if numberofbackups == 1:
